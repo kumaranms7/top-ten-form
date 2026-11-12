@@ -186,7 +186,7 @@
   /* ---------- built-in captcha (math / text image / question) ---------- */
   function capUrl(form, extra) { return form.action + (form.action.indexOf('?') > -1 ? '&' : '?') + 'tf_form_id=' + encodeURIComponent(form.getAttribute('data-form-id')) + extra; }
   function capRender(form, c) {
-    var w = form.querySelector('.tf-captcha'); if (!w) return;
+    var w = form.querySelector('.tf-captcha:not(.tf-ext-cap)'); if (!w) return;
     var box = w.querySelector('.tf-cap-q'), id = w.querySelector('input[name=tf_captcha_id]'), ans = w.querySelector('input[name=tf_captcha_answer]'), alt = w.querySelector('.tf-cap-alt');
     box.textContent = '';
     if (c && c.builtin === false) { w.style.display = 'none'; ans.required = false; ans.disabled = true; id.disabled = true; return; } // an external captcha took over
@@ -198,10 +198,43 @@
     w.setAttribute('data-ctype', c.type); if (alt) alt.style.display = c.type === 'question' ? 'none' : '';
   }
   function capLoad(form, alt) {
-    var w = form.querySelector('.tf-captcha'); if (!w) return;
+    var w = form.querySelector('.tf-captcha:not(.tf-ext-cap)'); if (!w) return;
     w._alt = !!alt;
     fetch(capUrl(form, '&tf_captcha=1' + (alt ? '&alt=1' : '')), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
       .then(function (r) { return r.json(); }).then(function (j) { capRender(form, j); }).catch(function () { capRender(form, null); });
+  }
+
+  /* ---------- Google reCAPTCHA / Cloudflare Turnstile: loaded only when the visitor starts the form (keeps the third-party script out of page load) ---------- */
+  var capQ = {};
+  function loadCapApi(prov, cb) {
+    var api = function () { return prov === 'turnstile' ? window.turnstile : (window.grecaptcha && window.grecaptcha.render ? window.grecaptcha : null); };
+    if (api()) { cb(api()); return; }
+    (capQ[prov] = capQ[prov] || []).push(cb); if (capQ[prov].length > 1) return;
+    var fn = 'tfCapReady_' + prov;
+    window[fn] = function () { var q = capQ[prov]; capQ[prov] = []; q.forEach(function (f) { f(api()); }); };
+    var s = d.createElement('script'); s.async = true;
+    s.src = (prov === 'turnstile' ? 'https://challenges.cloudflare.com/turnstile/v0/api.js' : 'https://www.google.com/recaptcha/api.js') + '?render=explicit&onload=' + fn;
+    d.head.appendChild(s);
+  }
+  function initExtCaptcha(form) {
+    var w = form.querySelector('.tf-ext-cap'); if (!w) return;
+    var slot = w.querySelector('.tf-ext-slot'), prov = w.getAttribute('data-provider'), started = false;
+    function start() {
+      if (started) return; started = true;
+      ['focusin', 'pointerdown', 'touchstart', 'keydown'].forEach(function (t) { form.removeEventListener(t, start, true); });
+      loadCapApi(prov, function (api) { try { w._wid = api.render(slot, { sitekey: w.getAttribute('data-sitekey') }); } catch (e) {} });
+    }
+    w._start = start;
+    ['focusin', 'pointerdown', 'touchstart', 'keydown'].forEach(function (t) { form.addEventListener(t, start, true); });
+  }
+  function extCapSolved(form) {
+    var w = form.querySelector('.tf-ext-cap'); if (!w) return true;
+    var r = w.querySelector('[name="g-recaptcha-response"],[name="cf-turnstile-response"]');
+    return !!(r && r.value);
+  }
+  function extCapReset(form) {
+    var w = form.querySelector('.tf-ext-cap'); if (!w || w._wid === undefined) return;
+    try { (w.getAttribute('data-provider') === 'turnstile' ? window.turnstile : window.grecaptcha).reset(w._wid); } catch (e) {}
   }
 
   /* ---------- save & continue later ---------- */
@@ -271,7 +304,8 @@
         .then(function (r) { return r.json(); }).then(function (j) { form._tok = (j && j.token) || ''; }).catch(function () {});
     }
     getToken();
-    var cw = form.querySelector('.tf-captcha');
+    initExtCaptcha(form);
+    var cw = form.querySelector('.tf-captcha:not(.tf-ext-cap)');
     if (cw) {
       capLoad(form, false);
       cw.querySelector('.tf-cap-refresh').addEventListener('click', function () { capLoad(form, !!cw._alt); });
@@ -308,6 +342,7 @@
         if (bad) try { bad.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {}
         return;
       }
+      if (!extCapSolved(form)) { var cw2 = form.querySelector('.tf-ext-cap'); if (cw2._start) cw2._start(); var we = setError(form, 'tf_captcha', 'Please tick the captcha box.'); if (we) try { we.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {} return; }
       var btn = form.querySelector('.tf-submit'), label = btn.textContent;
       btn.disabled = true; btn.textContent = 'Sending...';
       var fd = new FormData(form); fd.append('tf_page', location.href); fd.append('tf_token', form._tok || ''); fd.append('tf_srcpage', d.referrer || '');
@@ -317,7 +352,7 @@
         .then(function (j) {
           if (j.success) {
             if (j.redirect) { window.location.href = j.redirect; return; }
-            msg(form, j.message, true); form.reset(); getToken(); capLoad(form, false);
+            msg(form, j.message, true); form.reset(); getToken(); capLoad(form, false); extCapReset(form);
             [].forEach.call(form.querySelectorAll('.tf-field[data-type=signature]'), function (w) { if (w._clearSig) w._clearSig(); });
             started = Date.now(); if (form._steps) showStep(form, 0); refresh(form);
           } else {
@@ -326,6 +361,7 @@
             if (j.captcha) capRender(form, j.captcha);                       // the old challenge is gone: show the new one
             else if (j.errors && j.errors.tf_captcha) { var ai = form.querySelector('.tf-cap-ans'); if (ai) { ai.value = ''; ai.focus(); } }
             if (first && form._steps) { var s2 = first.closest('.tf-step'); if (s2) showStep(form, +s2.getAttribute('data-step')); }
+            extCapReset(form);
             msg(form, j.message || 'Something went wrong.', false);
           }
         })

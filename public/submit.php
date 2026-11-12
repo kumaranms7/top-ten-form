@@ -56,10 +56,10 @@ if ($origin) {
 // ---- Save & resume: fetch a saved draft ----
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['tf_captcha'])) {   // a new built-in captcha challenge (never contains the answer)
     header('Content-Type: application/json'); header('Cache-Control: no-store');
-    if (!captcha_builtin_active()) { echo json_encode(['builtin' => false]); exit; }
+    if (!captcha_builtin_active($form)) { echo json_encode(['builtin' => false]); exit; }
     if (q('SELECT COUNT(*) FROM rate_limits WHERE ip=? AND form_id=? AND created_at > (NOW() - INTERVAL 10 MINUTE)', [$ip, -(1000000 + $fid)])->fetchColumn() >= 60) { http_response_code(429); echo json_encode(['builtin' => true, 'error' => 'Too many requests. Please wait a moment.']); exit; }
     q('INSERT INTO rate_limits (ip, form_id) VALUES (?,?)', [$ip, -(1000000 + $fid)]);
-    echo json_encode(captcha_issue($fid, !empty($_GET['alt']) ? 'question' : $s['captcha_type'], $s['captcha_questions']) + ['builtin' => true]); exit;
+    echo json_encode(captcha_issue($fid, !empty($_GET['alt']) ? 'question' : form_captcha($form)['type']) + ['builtin' => true]); exit;
 }
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['tf_token'])) {   // a fresh signed token for the spam check (the form script asks for one on load)
     header('Content-Type: application/json'); header('Cache-Control: no-store');
@@ -114,14 +114,14 @@ if (q('SELECT COUNT(*) FROM rate_limits WHERE ip=? AND form_id=? AND created_at 
     || q('SELECT COUNT(*) FROM rate_limits WHERE ip=? AND form_id>0 AND created_at > (NOW() - INTERVAL 10 MINUTE)', [$ip])->fetchColumn() >= 40)
     respond(false, 'Too many submissions. Please try again later.', [], [], $isAjax);
 
-// ---- Captcha (mandatory on every form): the provider chosen in Settings, otherwise the built-in captcha ----
-if (captcha_external_active()) {
+// ---- Captcha: only when the form has one (a Captcha field, or mandatory for every form in Settings). Provider chosen in Settings, otherwise the built-in captcha ----
+if (captcha_external_active($form)) {
     $tok = $_POST['cf-turnstile-response'] ?? ($_POST['g-recaptcha-response'] ?? '');
     $url = captcha_provider() === 'turnstile' ? 'https://challenges.cloudflare.com/turnstile/v0/siteverify' : 'https://www.google.com/recaptcha/api/siteverify';
     $ctx = stream_context_create(['http' => ['method' => 'POST', 'header' => 'Content-type: application/x-www-form-urlencoded', 'content' => http_build_query(['secret' => captcha_cfg()[2], 'response' => $tok, 'remoteip' => $ip]), 'timeout' => 8]]);
     $res = json_decode(@file_get_contents($url, false, $ctx), true);
     if (empty($res['success'])) respond(false, 'Please complete the captcha verification.', [], [], $isAjax);
-} elseif (captcha_builtin_active()) {
+} elseif (captcha_builtin_active($form)) {
     $failKey = -(2000000 + $fid);
     if (q('SELECT COUNT(*) FROM rate_limits WHERE ip=? AND form_id=? AND created_at > (NOW() - INTERVAL 10 MINUTE)', [$ip, $failKey])->fetchColumn() >= 30)
         respond(false, 'Too many wrong answers. Please wait a few minutes and try again.', [], [], $isAjax);
@@ -129,7 +129,7 @@ if (captcha_external_active()) {
     $cv = captcha_verify($capId, (string)($_POST['tf_captcha_answer'] ?? ''), $fid);
     if (!$cv['ok']) {
         if ($capId !== '' && trim((string)($_POST['tf_captcha_answer'] ?? '')) !== '') q('INSERT INTO rate_limits (ip, form_id) VALUES (?,?)', [$ip, $failKey]);
-        $fresh = $cv['new'] ? captcha_issue($fid, $s['captcha_type'], $s['captcha_questions']) : null;
+        $fresh = $cv['new'] ? captcha_issue($fid, form_captcha($form)['type']) : null;
         respond(false, 'Please check the security question.', ['captcha' => $fresh], ['tf_captcha' => $cv['msg']], $isAjax);
     }
 }
@@ -145,7 +145,7 @@ if (!preg_match('#^https?://#i', $pageUrl)) $pageUrl = '';
 $ua = substr($_SERVER['HTTP_USER_AGENT'] ?? '', 0, 255);
 $meta = ['page_url' => $pageUrl, 'user_agent' => $ua];
 $flatPre = array_map('flat_value', $vals);
-if (captcha_builtin_active() && !empty($capId)) captcha_consume($capId);   // solved challenge is single-use
+if (captcha_builtin_active($form) && !empty($capId)) captcha_consume($capId);   // solved challenge is single-use
 $tokenInfo = spam_verify_token((string)($_POST['tf_token'] ?? ''), $fid, true);   // single use: consumed now that the submission is valid
 $spamReason = spam_check($fields, $flatPre, $ip, $_POST, ['level' => $level, 'token' => $tokenInfo, 'form_id' => $fid]);   // null = looks fine
 $utmJson = clean_utm($_POST['tf_utm'] ?? '');

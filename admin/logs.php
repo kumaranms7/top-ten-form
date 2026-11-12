@@ -61,7 +61,7 @@ $ew = ["l.form_id IN (SELECT id FROM forms WHERE site_id IN ($sitesIn))"]; $ep =
 if ($fForm) { $ew[] = 'l.form_id=?'; $ep[] = $fForm; }
 $rows = q('SELECT l.*, f.name fname FROM email_logs l LEFT JOIN forms f ON f.id=l.form_id WHERE ' . implode(' AND ', $ew) . ' ORDER BY l.id DESC LIMIT 200', $ep)->fetchAll(); ?>
 <table><tr><th>Date</th><th>Form</th><th>To</th><th>Subject</th><th>Status</th><th>Error</th></tr>
-<?php foreach ($rows as $r): ?><tr><td><?= e($r['created_at']) ?></td><td><?= e($r['fname']) ?></td><td><?= e($r['to_email']) ?></td><td><?= e($r['subject']) ?></td><td><span class="tag <?= $r['status'] === 'sent' ? 'green' : 'red' ?>"><?= $r['status'] ?></span></td><td><?= e($r['error']) ?></td></tr><?php endforeach; ?></table>
+<?php foreach ($rows as $r): ?><tr><td><?= e(fmt_datetime($r['created_at'])) ?></td><td><?= e($r['fname']) ?></td><td><?= e($r['to_email']) ?></td><td><?= e($r['subject']) ?></td><td><span class="tag <?= $r['status'] === 'sent' ? 'green' : 'red' ?>"><?= $r['status'] ?></span></td><td><?= e($r['error']) ?></td></tr><?php endforeach; ?></table>
 <?php elseif ($tab === 'queue'): $rows = q('SELECT j.*, f.name fname FROM jobs j LEFT JOIN forms f ON f.id=j.form_id WHERE ' . ($plat ? '1=1' : 'j.form_id IN ' . site_forms_sql()) . ' ORDER BY j.id DESC LIMIT 100')->fetchAll(); ?>
 <p class="muted">Emails and webhooks wait here until sent. Failures are retried automatically (1 min, 5 min, 15 min, 1 h, 6 h), then marked failed.</p>
 <form method="post" class="actions" style="margin-bottom:14px"><?= csrf_field() ?><button class="btn sm" name="action" value="run">Process queue now</button>
@@ -79,5 +79,5 @@ if ($fUser) { $aw[] = 'a.user_id=?'; $ap[] = $fUser; }
 if ($plat && $fAct !== '') { $aw[] = 'a.action LIKE ?'; $ap[] = '%' . addcslashes($fAct, '%_' . chr(92)) . '%'; }
 $rows = q('SELECT a.*, u.name, s.name site_name FROM activity_log a LEFT JOIN users u ON u.id=a.user_id LEFT JOIN sites s ON s.id=a.site_id WHERE ' . implode(' AND ', $aw) . ' ORDER BY a.id DESC LIMIT 200', $ap)->fetchAll(); ?>
 <table><tr><th>Date</th><?= $multi ? '<th>Website</th>' : '' ?><th>User</th><th>Action</th><th>IP</th></tr>
-<?php foreach ($rows as $r): ?><tr><td><?= e($r['created_at']) ?></td><?= $multi ? '<td>' . e($r['site_name'] ?? '-') . '</td>' : '' ?><td><?= e($r['name'] ?? '-') ?></td><td><?= e($r['action']) ?></td><td><?= e($r['ip']) ?></td></tr><?php endforeach; ?></table>
+<?php foreach ($rows as $r): ?><tr><td><?= e(fmt_datetime($r['created_at'])) ?></td><?= $multi ? '<td>' . e($r['site_name'] ?? '-') . '</td>' : '' ?><td><?= e($r['name'] ?? '-') ?></td><td><?= e($r['action']) ?></td><td><?= e($r['ip']) ?></td></tr><?php endforeach; ?></table>
 <?php endif; admin_footer();

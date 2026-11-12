@@ -103,7 +103,7 @@ if (in_array($export, ['csv', 'xlsx'], true)) {
     $data = [];
     foreach ($rows as $r) {
         $d = json_decode($r['data_json'], true) ?: []; $src = entry_sources($r);
-        $line = [(int)$r['id'], $r['fname'], $r['created_at'], ENTRY_STATUSES[status_token($r['status'])], (string)$r['aname']];
+        $line = [(int)$r['id'], $r['fname'], fmt_datetime($r['created_at']), ENTRY_STATUSES[status_token($r['status'])], (string)$r['aname']];
         foreach ($labels as $k) $line[] = flat_value($d[$k] ?? '');
         if ($export !== 'pdf') array_push($line, $r['ip'], $r['page_url'], $src['label'], $src['page'], $src['utm']['utm_campaign'] ?? '', $src['utm']['utm_medium'] ?? '');
         $data[] = $line;
@@ -124,7 +124,7 @@ if (in_array($export, ['csv', 'xlsx'], true)) {
     } else {
         require_once __DIR__ . '/../app/pdf.php';
         $pdf = new SimplePdf();
-        $pdf->table(($formRow['name'] ?? 'All forms') . ' - Entries', 'Exported ' . date('M j, Y g:i a') . ' | ' . count($data) . ' entr' . (count($data) === 1 ? 'y' : 'ies') . ($view === 'spam' ? ' | Spam folder' : ''), $head, $data);
+        $pdf->table(($formRow['name'] ?? 'All forms') . ' - Entries', 'Exported ' . fmt_datetime(time()) . ' | ' . count($data) . ' entr' . (count($data) === 1 ? 'y' : 'ies') . ($view === 'spam' ? ' | Spam folder' : ''), $head, $data);
         header('Content-Type: application/pdf'); header("Content-Disposition: attachment; filename=\"$name.pdf\"");
         echo $pdf->output();
     }
@@ -172,7 +172,7 @@ if ($fid && $canEdit) echo form_tabs($fid, 'entries'); ?>
 else: $pv = []; foreach ($d as $v) { $t = flat_value($v); if ($t !== '') $pv[] = $t; if (count($pv) >= 3) break; } ?>
 <td><?= e($r['fname']) ?></td><td><?= e(mb_strimwidth(implode(' | ', $pv), 0, 70, '...')) ?></td><?php endif; ?>
 <td><span class="tag <?= ENTRY_STATUS_COLOR[status_token($r['status'])] ?>"><?= e(ENTRY_STATUSES[status_token($r['status'])]) ?></span><?= $r['is_spam'] ? ' <span class="tag red" title="' . e($r['spam_reason']) . '">spam</span>' : '' ?></td>
-<td><?= e($r['aname'] ?: '-') ?></td><td><?= e(date('M j, Y g:i a', strtotime($r['created_at']))) ?></td>
+<td><?= e($r['aname'] ?: '-') ?></td><td><?= e(fmt_datetime(strtotime($r['created_at']))) ?></td>
 <td><a class="btn sm sec" href="entry.php?id=<?= $r['id'] ?>"><?= icon('eye') ?>View</a></td></tr>
 <?php endforeach; if (!$rows) echo '<tr><td colspan="12" class="muted">No entries found.</td></tr>'; ?></table>
 <?php if ($canEdit && $rows): ?><div class="actions bulk">

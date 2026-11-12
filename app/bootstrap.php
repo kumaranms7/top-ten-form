@@ -153,6 +153,12 @@ function flash(?string $msg = null, string $type = 'ok') {
 }
 function slugify(string $s): string { $s = strtolower(trim(preg_replace('/[^A-Za-z0-9]+/', '-', $s), '-')); return $s ?: 'form'; }
 
+// ---- display formats used everywhere (admin, emails, reports): date 12-31-2026, time 3:05 PM (12-hour, no leading zero) ----
+function fmt_ts($t): int { return is_int($t) || is_float($t) ? (int)$t : (int)(strtotime((string)$t) ?: 0); }
+function fmt_date($t): string { return date('m-d-Y', fmt_ts($t)); }
+function fmt_time($t, bool $seconds = false): string { return date($seconds ? 'g:i:s A' : 'g:i A', fmt_ts($t)); }
+function fmt_datetime($t, bool $seconds = false): string { return fmt_date($t) . ' ' . fmt_time($t, $seconds); }
+
 // ---- field model helpers ----
 function field_types(): array {
     return [
@@ -160,10 +166,10 @@ function field_types(): array {
         'select' => 'Dropdown', 'radio' => 'Radio buttons', 'checkbox' => 'Checkboxes', 'date' => 'Date',
         'file' => 'File upload', 'hidden' => 'Hidden', 'consent' => 'Consent checkbox',
         'name' => 'Name', 'address' => 'Address', 'rating' => 'Rating', 'time' => 'Time', 'price' => 'Price', 'calculated' => 'Calculated', 'signature' => 'Signature',
-        'heading' => 'Heading', 'paragraph' => 'Paragraph', 'pagebreak' => 'Page break',
+        'captcha' => 'Captcha', 'heading' => 'Heading', 'paragraph' => 'Paragraph', 'pagebreak' => 'Page break',
     ];
 }
-function is_input_field(array $f): bool { return !in_array($f['type'], ['heading', 'paragraph', 'pagebreak'], true); }
+function is_input_field(array $f): bool { return !in_array($f['type'], ['heading', 'paragraph', 'pagebreak', 'captcha'], true); }
 
 if (!$tfInstalled && !defined('TF_INSTALLING')) {
     header('Location: ' . base_url() . '/install.php');

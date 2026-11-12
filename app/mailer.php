@@ -61,7 +61,7 @@ function split_emails(?string $s): array {
 function merge_tags(string $tpl, array $form, array $fields, array $vals, int $entryId, string $ip, bool $html = true, array $meta = []): string {
     $cell = 'padding:8px 14px;border:1px solid #e3e6ee;';
     $rows = '';
-    $map = ['{form_name}' => e($form['name']), '{entry_id}' => (string)$entryId, '{date}' => date('Y-m-d H:i'), '{ip}' => e($ip),
+    $map = ['{form_name}' => e($form['name']), '{entry_id}' => (string)$entryId, '{date}' => fmt_datetime(time()), '{ip}' => e($ip),
         '{page_url}' => e($meta['page_url'] ?? ''), '{user_agent}' => e($meta['user_agent'] ?? '')];
     foreach ($fields as $f) {
         if (!is_input_field($f)) continue;
@@ -72,7 +72,7 @@ function merge_tags(string $tpl, array $form, array $fields, array $vals, int $e
     }
     $tbl = fn($r) => '<table style="border-collapse:collapse;font-family:Arial,sans-serif;font-size:14px;width:100%;max-width:640px">' . $r . '</table>';
     $info = '';
-    foreach (['Form' => $form['name'], 'Submitted' => date('Y-m-d H:i:s'), 'IP address' => $ip, 'Page URL' => $meta['page_url'] ?? '', 'Browser' => $meta['user_agent'] ?? ''] as $k => $v)
+    foreach (['Form' => $form['name'], 'Submitted' => fmt_datetime(time()), 'IP address' => $ip, 'Page URL' => $meta['page_url'] ?? ''] as $k => $v)
         $info .= '<tr><td style="' . $cell . 'background:#f6f7fb;width:200px"><strong>' . $k . '</strong></td><td style="' . $cell . '">' . e($v) . '</td></tr>';
     $map['{all_fields}'] = $tbl($rows);
     $map['{entry_details}'] = $tbl($rows . $info); // same content as the Entry page in the admin

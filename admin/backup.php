@@ -61,13 +61,13 @@ admin_header('Backups', 'settings', '', 'Download a full copy of your forms, ent
 <form method="post"><?= csrf_field() ?><input type="hidden" name="action" value="schedule"><div class="row">
 <label>How often<select name="schedule"><?php foreach (['off' => 'Off', 'daily' => 'Every day', 'weekly' => 'Every week'] as $k => $l) echo '<option value="' . $k . '"' . ($mode === $k ? ' selected' : '') . ">$l</option>"; ?></select></label>
 <label>Keep the newest<input type="number" min="1" max="60" name="keep" value="<?= (int)setting('backup_keep', 7) ?>"></label></div>
-<button class="btn sm">Save schedule</button> <span class="muted">Last automatic run: <?= $last ? e(date('M j, g:i a', $last)) : 'never' ?><?= setting('last_backup_status') ? ' (' . e(setting('last_backup_status')) . ')' : '' ?></span></form>
+<button class="btn sm">Save schedule</button> <span class="muted">Last automatic run: <?= $last ? e(fmt_datetime($last)) : 'never' ?><?= setting('last_backup_status') ? ' (' . e(setting('last_backup_status')) . ')' : '' ?></span></form>
 <p class="muted" style="margin-bottom:0">Runs through the background tasks, so it works without any cron setup while the app is in use.</p></div>
 </div>
 
 <h2 style="margin-top:22px">Your backups</h2>
 <table><tr><th>File</th><th>Type</th><th>Size</th><th>Created</th><th></th></tr>
-<?php foreach ($list as $b): ?><tr><td><?= e($b['name']) ?></td><td><span class="tag <?= $tagc[$b['reason']] ?? '' ?>"><?= e($b['reason']) ?></span></td><td><?= $fmt($b['size']) ?></td><td><?= e(date('M j, Y g:i a', $b['time'])) ?></td>
+<?php foreach ($list as $b): ?><tr><td><?= e($b['name']) ?></td><td><span class="tag <?= $tagc[$b['reason']] ?? '' ?>"><?= e($b['reason']) ?></span></td><td><?= $fmt($b['size']) ?></td><td><?= e(fmt_datetime($b['time'])) ?></td>
 <td class="actions"><a class="btn sm sec" href="backup.php?dl=<?= urlencode($b['name']) ?>">Download</a>
 <button class="btn sm sec" type="button" onclick="restoreDlg('<?= e($b['name']) ?>')">Restore</button>
 <form method="post" onsubmit="return confirm('Delete this backup file?')"><?= csrf_field() ?><input type="hidden" name="name" value="<?= e($b['name']) ?>"><button class="btn sm danger" name="action" value="delete">Delete</button></form></td></tr><?php endforeach;

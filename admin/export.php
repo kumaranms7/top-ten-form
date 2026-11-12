@@ -10,7 +10,7 @@ $embedHtml = $base . '/public/embed.php?id=' . $id . '&type=html';
 $embedJs = $base . '/public/embed.php?id=' . $id . '&type=js';
 
 $safeName = trim(str_replace(['-->', '*/', '?>'], '', preg_replace('/\s+/', ' ', $form['name'])));
-$jsCode = "<!-- TopTen Form: " . $safeName . " -->\n<div id=\"topten-form-$id\"></div>\n<script src=\"$embedJs\" async></script>\n";
+$jsCode = "<!-- TopTen Form: " . $safeName . " -->\n<div id=\"topten-form-$id\" style=\"min-height:" . form_est_height($form) . "px\"></div>\n<script src=\"$embedJs\" async></script>\n";
 
 $phpCode = <<<PHP
 <?php
@@ -45,7 +45,7 @@ echo form_tabs($id, 'code'); ?>
 <div class="card preview-bar"><div class="devices" role="group" aria-label="Code type">
 <?php $first = true; foreach ($options as $k => [$label, $badge]): ?><button type="button" data-opt="<?= $k ?>" class="<?= $first ? 'active' : '' ?>"><?= e($label) ?><span class="tag <?= $badge === 'static' ? '' : 'green' ?>" style="margin-left:6px"><?= e($badge) ?></span></button><?php $first = false; endforeach; ?></div></div>
 
-<?php if (captcha_builtin_active()): ?><div class="alert ok"><b>This form includes a security check (captcha).</b> If you pasted this form's code on your website earlier, <b>replace it with the new code</b> (or use the PHP / JavaScript embed, which update by themselves). Older pasted code has no captcha box, so its submissions are refused while "Require a captcha" is on in Settings.</div><?php endif; ?>
+<?php if (form_captcha($form)): ?><div class="alert ok"><b>This form includes a security check (captcha).</b> If you pasted this form's code on your website earlier, <b>replace it with the new code</b> (or use the PHP / JavaScript embed, which update by themselves). Older pasted code has no captcha box, so its submissions are refused.</div><?php endif; ?>
 <div class="opt" id="opt-html"><div class="card"><h2>Full HTML (static)</h2>
 <p class="muted">Plain HTML with the CSS and JS links. Works on any website. <b>After you add or change fields, copy this again</b> and replace it on your page.</p>
 <div class="copybox"><button class="btn sm sec" data-copy="c-html">Copy</button><textarea id="c-html" class="code" readonly rows="20"><?= e($options['html'][2]) ?></textarea></div></div>
@@ -64,7 +64,7 @@ echo form_tabs($id, 'code'); ?>
 <div class="opt" id="opt-js" hidden><div class="card"><h2>JavaScript embed</h2>
 <p class="muted">Works on <b>any</b> website (plain HTML, WordPress, etc.). Put the <code>&lt;div&gt;</code> where the form should appear; the script writes the real form (and its styles) into that spot. No iframe. <b>Edits made in the builder show up automatically</b>.</p>
 <div class="copybox"><button class="btn sm sec" data-copy="c-js">Copy</button><textarea id="c-js" class="code" readonly rows="6"><?= e($jsCode) ?></textarea></div>
-<ul class="muted" style="margin-bottom:0"><li>The form appears a moment after the page loads. For the best page-speed score, prefer the PHP embed or Full HTML when you can.</li>
+<ul class="muted" style="margin-bottom:0"><li>The form appears a moment after the page loads; the snippet reserves its space so the page does not jump. For the best page-speed score, prefer the PHP embed or Full HTML when you can.</li>
 <li>Placing the <code>&lt;script&gt;</code> elsewhere (e.g. footer) is fine: it finds the <code>&lt;div id="topten-form-<?= $id ?>"&gt;</code> by id. Add <code>data-target="#my-box"</code> to the script tag to target a different element.</li>
 <li>Updates take up to a minute because the script is cached briefly.</li></ul></div></div>
 

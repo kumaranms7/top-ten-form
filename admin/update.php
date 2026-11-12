@@ -64,7 +64,7 @@ admin_header('Updates', 'settings', '', 'Install a new version from a ZIP file, 
 
 <h2 style="margin-top:22px">Rollback</h2>
 <table><tr><th>Installed</th><th>From</th><th>To</th><th>Files</th><th></th></tr>
-<?php foreach ($rbs as $r): ?><tr><td><?= e(date('M j, Y g:i a', strtotime($r['created_at']))) ?></td><td><?= e($r['from']) ?></td><td><?= e($r['to']) ?></td><td><?= count($r['replaced']) + count($r['added']) ?></td>
+<?php foreach ($rbs as $r): ?><tr><td><?= e(fmt_datetime(strtotime($r['created_at']))) ?></td><td><?= e($r['from']) ?></td><td><?= e($r['to']) ?></td><td><?= count($r['replaced']) + count($r['added']) ?></td>
 <td><form method="post" onsubmit="return confirm('Restore the files from before this update?')"><?= csrf_field() ?><input type="hidden" name="id" value="<?= e($r['id']) ?>"><button class="btn sm sec" name="action" value="rollback">Roll back</button></form></td></tr><?php endforeach;
 if (!$rbs) echo '<tr><td colspan="5" class="muted">No updates installed yet. After you install one, you can undo it here.</td></tr>'; ?></table>
 <p class="muted">Rolling back restores the program files. If the update also upgraded the database, restore the backup that was taken automatically (see <a href="backup.php">Backups</a>).</p>

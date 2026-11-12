@@ -72,7 +72,7 @@ admin_header('Site settings', 'settings', '', 'Details, logo, email and security
 </div>
 
 <div class="grid2">
-<div class="card"><h2>Captcha</h2><p class="muted" style="margin-top:-6px">Every form needs a captcha. By default this website uses the platform's choice. You can use your own Google reCAPTCHA / Cloudflare Turnstile keys, or the built-in captcha.</p>
+<div class="card"><h2>Captcha</h2><p class="muted" style="margin-top:-6px">Which captcha provider this website's forms use (whether a form has a captcha is set by the Captcha field, or by the platform when it makes captcha mandatory). By default this website uses the platform's choice. You can use your own Google reCAPTCHA / Cloudflare Turnstile keys, or the built-in captcha.</p>
 <label>Captcha for this website<select name="captcha_provider"><?php foreach (['inherit' => 'Same as the platform (' . (setting('captcha_provider', 'none') === 'none' ? 'built-in' : setting('captcha_provider')) . ')', 'none' => 'Built-in captcha', 'recaptcha' => 'Google reCAPTCHA (own keys)', 'turnstile' => 'Cloudflare Turnstile (own keys)'] as $k => $l) echo '<option value="' . $k . '"' . ($prov === $k ? ' selected' : '') . '>' . e($l) . '</option>'; ?></select></label>
 <div class="row"><label>Site key<input name="captcha_site_key" value="<?= e($own('captcha_site_key')) ?>" autocomplete="off"></label><label>Secret key <small><?= $own('captcha_secret_key') !== '' ? '(saved, leave blank to keep)' : '' ?></small><input type="password" name="captcha_secret_key" autocomplete="new-password"></label></div>
 <?php if (in_array($prov, ['recaptcha', 'turnstile'], true) && captcha_cfg()[0] === 'none'): ?><div class="alert err">Enter both keys, otherwise the built-in captcha is used.</div><?php endif; ?></div>

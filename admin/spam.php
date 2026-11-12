@@ -37,9 +37,9 @@ $spamCount = (int)q('SELECT COUNT(*) FROM entries WHERE is_spam=1 AND form_id IN
 admin_header('Spam rules', 'entries', '', 'Control what is treated as spam. Flagged entries wait in the Spam folder and never send emails.'); ?>
 <p><a href="entries.php?view=spam">&larr; Open the Spam folder (<?= $spamCount ?>)</a></p>
 <div class="card shield"><h2>Built-in protection <span class="tag green">on for every form</span></h2>
-<p class="muted" style="margin-top:-6px">Visitors answer one simple security check (the built-in captcha); everything else below is invisible to them. Choose the level and the captcha type per form in the builder (Form properties &rarr; Spam protection). <b>Standard</b> is the default.</p>
+<p class="muted" style="margin-top:-6px">Visitors answer one simple security check (the built-in captcha); everything else below is invisible to them. Choose the level per form in the builder (Form properties &rarr; Spam protection) and add the <b>Captcha</b> field where you want it. <b>Standard</b> is the default.</p>
 <div class="layers">
-<div><b>0. Captcha (required)</b><span>Built-in math / text / question check on every form, or Google / Cloudflare if you set one in Settings.</span></div>
+<div><b>0. Captcha (optional field, or mandatory platform-wide)</b><span>Built-in math / text / question check, or Google / Cloudflare if you set one in Settings.</span></div>
 <div><b>1. Honeypot</b><span>A hidden field only bots fill in. Those submissions are dropped silently.</span></div>
 <div><b>2. Signed single-use token</b><span>Each page gets a token signed by your server. Forged, reused or missing tokens are caught.</span></div>
 <div><b>3. Server-side timing</b><span>The server measures how long the form was open. Instant submissions are bots.</span></div>

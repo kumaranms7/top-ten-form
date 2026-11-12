@@ -27,7 +27,7 @@ $stats = [
 // ---------- chart data ----------
 $perDay = array_column(q("SELECT DATE(created_at) d, COUNT(*) c FROM entries WHERE is_spam=0 AND created_at >= ?$fw GROUP BY d", [$since])->fetchAll(), 'c', 'd');
 $points = [];
-for ($i = $range - 1; $i >= 0; $i--) { $d = date('Y-m-d', strtotime("-$i days")); $points[] = [date('M j', strtotime($d)), (int)($perDay[$d] ?? 0)]; }
+for ($i = $range - 1; $i >= 0; $i--) { $d = date('Y-m-d', strtotime("-$i days")); $points[] = [date('m-d', strtotime($d)), (int)($perDay[$d] ?? 0)]; }
 
 $byForm = [];
 foreach (q("SELECT f.id, f.name, COUNT(*) c FROM entries e JOIN forms f ON f.id=e.form_id WHERE e.is_spam=0 AND e.created_at >= ? AND e.form_id IN " . site_forms_sql() . " GROUP BY f.id, f.name ORDER BY c DESC LIMIT 8", [$since])->fetchAll() as $r)
@@ -71,6 +71,6 @@ admin_header('Dashboard', 'dashboard', '', 'Overview of your forms and submissio
 <table><tr><th>#</th><th>Form</th><th>Preview</th><th>Source</th><th>Date</th></tr>
 <?php foreach ($recent as $r): $d = json_decode($r['data_json'], true) ?: []; $pv = [];
   foreach ($d as $v) { $t = flat_value($v); if ($t !== '') $pv[] = $t; if (count($pv) >= 2) break; } ?>
-<tr class="<?= $r['is_read'] ? '' : 'unread' ?>"><td><a href="entry.php?id=<?= $r['id'] ?>"><?= $r['id'] ?></a></td><td><?= e($r['fname']) ?></td><td><?= e(mb_strimwidth(implode(' | ', $pv), 0, 70, '...')) ?></td><td><?= e(entry_sources($r)['label']) ?></td><td><?= e(date('M j, g:i a', strtotime($r['created_at']))) ?></td></tr>
+<tr class="<?= $r['is_read'] ? '' : 'unread' ?>"><td><a href="entry.php?id=<?= $r['id'] ?>"><?= $r['id'] ?></a></td><td><?= e($r['fname']) ?></td><td><?= e(mb_strimwidth(implode(' | ', $pv), 0, 70, '...')) ?></td><td><?= e(entry_sources($r)['label']) ?></td><td><?= e(fmt_datetime(strtotime($r['created_at']))) ?></td></tr>
 <?php endforeach; if (!$recent) echo '<tr><td colspan="5" class="muted">No entries yet.</td></tr>'; ?></table>
 <?php admin_footer();

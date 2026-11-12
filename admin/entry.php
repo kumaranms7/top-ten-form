@@ -56,7 +56,7 @@ $replyTo = entry_reply_email($formLike, $data);
 $canEdit = can('editor');
 $prev = q('SELECT id FROM entries WHERE id<? AND form_id=? AND is_spam=? ORDER BY id DESC LIMIT 1', [$id, $en['form_id'], $en['is_spam']])->fetchColumn();
 $next = q('SELECT id FROM entries WHERE id>? AND form_id=? AND is_spam=? ORDER BY id ASC LIMIT 1', [$id, $en['form_id'], $en['is_spam']])->fetchColumn();
-admin_header('Entry #' . $id, 'entries', '', $en['fname'] . ' · ' . date('M j, Y g:i a', strtotime($en['created_at'])));
+admin_header('Entry #' . $id, 'entries', '', $en['fname'] . ' · ' . fmt_datetime(strtotime($en['created_at'])));
 ?>
 <div class="actions" style="justify-content:space-between;margin-bottom:16px">
   <a href="entries.php?form=<?= $en['form_id'] ?><?= $en['is_spam'] ? '&view=spam' : '' ?>">&larr; Back to entries</a>
@@ -77,7 +77,7 @@ admin_header('Entry #' . $id, 'entries', '', $en['fname'] . ' · ' . date('M j, 
 
   <div class="card"><h2>Notes &amp; activity</h2>
   <?php if ($canEdit): ?><form method="post"><?= csrf_field() ?><input type="hidden" name="action" value="note"><textarea name="note" rows="2" placeholder="Add an internal note (only your team sees this)..." required></textarea><p><button class="btn sm">Add note</button></p></form><?php endif; ?>
-  <ul class="timeline"><?php foreach ($notes as $n): ?><li><b><?= e($n['uname'] ?: 'System') ?></b> <span class="muted"><?= e(date('M j, g:i a', strtotime($n['created_at']))) ?></span><div><?= nl2br(e($n['note'])) ?></div></li><?php endforeach;
+  <ul class="timeline"><?php foreach ($notes as $n): ?><li><b><?= e($n['uname'] ?: 'System') ?></b> <span class="muted"><?= e(fmt_datetime(strtotime($n['created_at']))) ?></span><div><?= nl2br(e($n['note'])) ?></div></li><?php endforeach;
   if (!$notes) echo '<li class="muted">No notes yet.</li>'; ?></ul></div>
 
   <div class="card"><h2>Emails sent for this entry</h2><table><tr><th>To</th><th>Subject</th><th>Status</th><th>Error</th></tr>
@@ -96,7 +96,7 @@ admin_header('Entry #' . $id, 'entries', '', $en['fname'] . ' · ' . date('M j, 
   <?php else: ?><p>Status: <span class="tag <?= ENTRY_STATUS_COLOR[status_token($en['status'])] ?>"><?= e(ENTRY_STATUSES[status_token($en['status'])]) ?></span></p><?php endif; ?></div>
 
   <div class="card"><h2>Details</h2><table class="plain">
-  <tr><th>Form</th><td><?= e($en['fname']) ?></td></tr><tr><th>Submitted</th><td><?= e(date('M j, Y g:i:s a', strtotime($en['created_at']))) ?></td></tr>
+  <tr><th>Form</th><td><?= e($en['fname']) ?></td></tr><tr><th>Submitted</th><td><?= e(fmt_datetime(strtotime($en['created_at']), true)) ?></td></tr>
   <tr><th>Source</th><td><?= e($src['label']) ?></td></tr>
   <tr><th>Source page</th><td style="word-break:break-all"><?php if ($src['page']): ?><a href="<?= e($src['page']) ?>" target="_blank" rel="noopener noreferrer"><?= e($src['page']) ?></a><?php else: ?><span class="muted">Not recorded (visitor typed the address or came directly)</span><?php endif; ?></td></tr>
   <?php foreach ($src['utm'] as $k => $v): ?><tr><th><?= e($k) ?></th><td><?= e($v) ?></td></tr><?php endforeach; ?>

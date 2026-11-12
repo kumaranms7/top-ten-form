@@ -1,5 +1,15 @@
 # TopTen Form changelog
 
+## Unreleased
+
+- **Captcha is now a form field.** Add the **Captcha** field in the builder to place it anywhere in a form and pick its type. Platform Settings: "Captcha is mandatory for all website forms" adds one automatically at the end of every form; unticked, captcha is optional and each form adds the field when it needs one. Existing forms keep their captcha (migration 8 adds the field).
+- **Question and answer captcha** now asks a random, easy question (weekdays, months, simple sums in words, colours); no need to write questions.
+- **Google reCAPTCHA / Cloudflare Turnstile load only when the visitor starts the form**, so their third-party code no longer counts against page-speed scores.
+- **Less layout shift (CLS):** space is reserved for the JavaScript embed (the copy-paste snippet now includes a min-height), the form waits for its stylesheet, multi-step forms and captcha boxes no longer jump, conditional fields start hidden.
+- **Dates and times everywhere** (admin, emails, reports, exports) now read MM-DD-YYYY and 12-hour time without a leading zero (3:05 PM); emails have no seconds.
+- The "Browser" row was removed from the entry-details block of notification emails.
+- Migrations now always run in version order.
+
 ## 2.3.0 - multi-site platform
 
 - **Super admin layer.** One shared login for everyone. Super admins manage all websites, users and forms (Platform, Websites, Forms, Users pages), can "Enter" any website, and are the only ones who change platform settings (mail, captcha default, storage, antivirus, cron, backups, updates).

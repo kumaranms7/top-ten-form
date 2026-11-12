@@ -1,7 +1,7 @@
 <?php
 /**
  * Built-in captcha (self-hosted, no accounts, no external requests).
- * Types: math (default), text (distorted characters), question (your own question + accepted answers).
+ * Types: math (default), text (distorted characters), question (a random easy question about weekdays, months, simple sums in words or colours).
  * Math and text challenges are drawn as an SVG image by the server, so the answer is never in the page's HTML.
  * Only a keyed hash of the answer is stored. Each challenge is single-use, expires in 10 minutes and allows 5 tries.
  * If Google reCAPTCHA or Cloudflare Turnstile is configured in Settings, that is used for every form instead.
@@ -22,27 +22,37 @@ function captcha_cfg(): array {
 function captcha_provider(): string {
     return captcha_cfg()[0];
 }
+/** Super admin option: a captcha is mandatory on every form (added automatically). When off, only forms that contain a Captcha field have one. */
 function captcha_required(): bool { return setting('captcha_required', '1') === '1'; }
-function captcha_builtin_active(): bool { return captcha_required() && captcha_provider() === 'none'; }
-function captcha_external_active(): bool { return captcha_required() && captcha_provider() !== 'none'; }
+/** Does this form have a captcha, and which one? ['type' => math|text|question, 'label' => text, 'field' => the Captcha field or null (= added automatically)]. Null = no captcha. */
+function form_captcha(array $form): ?array {
+    foreach (form_fields($form) as $f) if (($f['type'] ?? '') === 'captcha') return ['type' => in_array($f['captcha_type'] ?? '', ['math', 'text', 'question'], true) ? $f['captcha_type'] : 'math', 'label' => trim((string)$f['label']) ?: 'Security check', 'field' => $f];
+    if (!captcha_required()) return null;
+    $t = form_settings($form)['captcha_type'] ?? 'math';
+    return ['type' => in_array($t, ['math', 'text', 'question'], true) ? $t : 'math', 'label' => 'Security check', 'field' => null];
+}
+function captcha_builtin_active(array $form): bool { return form_captcha($form) !== null && captcha_provider() === 'none'; }
+function captcha_external_active(array $form): bool { return form_captcha($form) !== null && captcha_provider() !== 'none'; }
 
 function captcha_norm(string $s): string { return mb_strtolower(preg_replace('/\s+/', ' ', trim($s))); }
 function captcha_hash(string $answer, string $id): string { return hash_hmac('sha256', captcha_norm($answer), spam_secret() . '|' . $id); }
 
-/** Default questions when a form has none of its own. Format of custom ones: one per line, "Question | answer, other answer". */
-function captcha_default_questions(): array {
-    return [['What colour is the sky on a clear day?', ['blue']], ['How many days are in a week? (a number)', ['7', 'seven']], ['What is the opposite of "hot"?', ['cold']],
-        ['What is the first month of the year?', ['january']], ['How many legs does a dog have? (a number)', ['4', 'four']], ['What do you call frozen water?', ['ice']]];
-}
-function captcha_parse_questions(string $text): array {
-    $out = [];
-    foreach (preg_split('/\R/', $text) as $line) {
-        if (strpos($line, '|') === false) continue;
-        [$q, $a] = array_map('trim', explode('|', $line, 2));
-        $answers = array_values(array_filter(array_map('trim', explode(',', $a)), 'strlen'));
-        if ($q !== '' && $answers) $out[] = [mb_substr($q, 0, 200), array_slice($answers, 0, 8)];
+/** A random, easy general-knowledge question (weekdays, months, simple sums in words, colours). Returns [question, accepted answers]. */
+function captcha_default_question(): array {
+    $days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    $months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    $words = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen', 'twenty'];
+    $colours = [['What colour is the sky on a clear day?', 'blue'], ['What colour is fresh grass?', 'green'], ['What colour is a ripe banana?', 'yellow'], ['What colour is snow?', 'white'],
+        ['What colour is a ripe tomato?', 'red'], ['What colour is a carrot?', 'orange'], ['What colour is coal?', 'black'], ['What colour do you get by mixing blue and yellow?', 'green'],
+        ['What colour is a ripe strawberry?', 'red']];
+    switch (random_int(0, 5)) {
+        case 0: $i = random_int(0, 6); return ["Which day comes after $days[$i]?", [strtolower($days[($i + 1) % 7])]];
+        case 1: $i = random_int(0, 6); return ["Which day comes before $days[$i]?", [strtolower($days[($i + 6) % 7])]];
+        case 2: $i = random_int(0, 11); return random_int(0, 1) ? ["Which month comes after $months[$i]?", [strtolower($months[($i + 1) % 12])]] : ["Which month comes before $months[$i]?", [strtolower($months[($i + 11) % 12])]];
+        case 3: $a = random_int(1, 9); $b = random_int(1, 10); return [ucfirst($words[$a]) . ' plus ' . $words[$b] . ' equals? (type a number)', [(string)($a + $b), $words[$a + $b]]];
+        case 4: $a = random_int(6, 20); $b = random_int(1, 5); return [ucfirst($words[$a]) . ' minus ' . $words[$b] . ' equals? (type a number)', [(string)($a - $b), $words[$a - $b]]];
+        default: $c = $colours[random_int(0, count($colours) - 1)]; return [$c[0], [$c[1]]];
     }
-    return $out;
 }
 
 /** An SVG image (as a data URI) of the given characters, with per-character rotation / offset / colour plus noise. */
@@ -70,8 +80,7 @@ function captcha_svg(string $text): string {
 /** Build a challenge. Returns ['answers' => [...], 'img' => data-URI | null, 'question' => text | null, 'label' => accessible description, 'type' => ...]. */
 function captcha_make(string $type, string $questionsText = ''): array {
     if ($type === 'question') {
-        $bank = captcha_parse_questions($questionsText) ?: captcha_default_questions();
-        [$q, $a] = $bank[random_int(0, count($bank) - 1)];
+        [$q, $a] = captcha_default_question();
         return ['type' => 'question', 'answers' => $a, 'img' => null, 'question' => $q, 'label' => $q];
     }
     if ($type === 'text') {

@@ -26,5 +26,5 @@ admin_header('Platform', 'platform', '', 'All websites at a glance'); ?>
 <td class="actions"><a class="btn sm" href="switch-site.php?id=<?= $s['id'] ?>&t=<?= $tok ?>">Enter</a> <a class="btn sm sec" href="sites.php?edit=<?= $s['id'] ?>">Edit</a></td></tr><?php endforeach; ?></table>
 <p><a class="btn sm" href="sites.php?new=1">+ Add website</a></p></div>
 <div class="card"><h2>Recent activity</h2><table><tr><th>Date</th><th>Website</th><th>User</th><th>Action</th></tr>
-<?php foreach ($act as $r): ?><tr><td><?= e($r['created_at']) ?></td><td><?= e($r['site_name'] ?? '-') ?></td><td><?= e($r['name'] ?? '-') ?></td><td><?= e($r['action']) ?></td></tr><?php endforeach; ?></table></div>
+<?php foreach ($act as $r): ?><tr><td><?= e(fmt_datetime($r['created_at'])) ?></td><td><?= e($r['site_name'] ?? '-') ?></td><td><?= e($r['name'] ?? '-') ?></td><td><?= e($r['action']) ?></td></tr><?php endforeach; ?></table></div>
 <?php admin_footer();

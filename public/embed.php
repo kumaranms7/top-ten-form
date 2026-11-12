@@ -32,10 +32,10 @@ if ($type === 'html') {
 header('Content-Type: application/javascript; charset=utf-8');
 $cfg = [
     'id' => (int)$form['id'],
-    'html' => render_form_markup($form, $base, false),
+    'html' => render_form_markup($form, $base),
+    'h' => form_est_height($form),
     'css' => asset_url($base, 'form.min.css'),
     'js' => asset_url($base, 'form.min.js'),
-    'extra' => array_values(array_filter([captcha_script_url($form)])),
 ];
 $json = json_encode($cfg, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG);
 echo <<<JS
@@ -45,13 +45,18 @@ echo <<<JS
   var el=(sel&&d.querySelector(sel))||d.getElementById('topten-form-'+c.id);
   if(!el){el=d.createElement('div');el.id='topten-form-'+c.id;if(me&&me.parentNode)me.parentNode.insertBefore(el,me);else d.body.appendChild(el);}
   if(el.getAttribute('data-tf-ready'))return;el.setAttribute('data-tf-ready','1');
-  if(!d.querySelector('link[data-tf-css]')){var l=d.createElement('link');l.rel='stylesheet';l.href=c.css;l.setAttribute('data-tf-css','1');d.head.appendChild(l);}
-  el.innerHTML=c.html;
+  if(!el.style.minHeight)el.style.minHeight=c.h+'px';
+  var done=false;
+  function show(){if(done)return;done=true;el.innerHTML=c.html;start();}
+  var cl=d.querySelector('link[data-tf-css]');
+  if(cl){if(cl.sheet)show();else{cl.addEventListener('load',show);setTimeout(show,2500);}}
+  else{var l=d.createElement('link');l.rel='stylesheet';l.href=c.css;l.setAttribute('data-tf-css','1');l.onload=show;l.onerror=show;setTimeout(show,2500);d.head.appendChild(l);}
+  function start(){
   function load(src,cb){var s=d.createElement('script');s.src=src;s.async=true;if(cb)s.onload=cb;d.head.appendChild(s);return s;}
   function boot(){window.TopTenForm&&window.TopTenForm.init(el);}
   if(window.TopTenForm)boot();
   else if(d.querySelector('script[data-tf-js]')){var t=setInterval(function(){if(window.TopTenForm){clearInterval(t);boot();}},50);}
   else{load(c.js,boot).setAttribute('data-tf-js','1');}
-  c.extra.forEach(function(u){if(!d.querySelector('script[src="'+u+'"]'))load(u);});
+  }
 })();
 JS;

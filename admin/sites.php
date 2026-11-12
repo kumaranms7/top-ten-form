@@ -77,7 +77,7 @@ if (!$ud) echo '<tr><td colspan="2" class="muted">No one yet. Add people under U
 <table><tr><th>Website</th><th>Status</th><th>Forms</th><th>Entries</th><th>Users</th><th>Last entry</th><th>Actions</th></tr>
 <?php foreach ($rows as $s): ?><tr><td><?php if ($s['logo'] && is_file(media_dir() . '/' . $s['logo'])): ?><img src="../public/media/<?= e($s['logo']) ?>" alt="" style="height:22px;vertical-align:middle;margin-right:8px;max-width:80px;object-fit:contain"><?php endif; ?><b><?= e($s['name']) ?></b><?= $s['website_url'] ? '<br><small class="muted">' . e($s['website_url']) . '</small>' : '' ?></td>
 <td><span class="tag <?= $s['status'] === 'active' ? 'green' : 'red' ?>"><?= e($s['status']) ?></span></td><td><?= (int)$s['nforms'] ?></td><td><?= (int)$s['nentries'] ?></td><td><?= (int)$s['nusers'] ?></td>
-<td><?= e($s['last_entry'] ? date('M j, Y', strtotime($s['last_entry'])) : '-') ?></td>
+<td><?= e($s['last_entry'] ? fmt_date(strtotime($s['last_entry'])) : '-') ?></td>
 <td class="actions"><a class="btn sm" href="switch-site.php?id=<?= $s['id'] ?>&t=<?= $tok ?>">Enter</a> <a class="btn sm sec" href="sites.php?edit=<?= $s['id'] ?>">Edit</a>
 <form method="post"><?= csrf_field() ?><input type="hidden" name="id" value="<?= $s['id'] ?>"><button class="btn sm sec" name="action" value="toggle"><?= $s['status'] === 'active' ? 'Suspend' : 'Reactivate' ?></button></form></td></tr>
 <?php endforeach; ?></table>

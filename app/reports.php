@@ -29,7 +29,7 @@ function build_combined_report_email(string $ym): array {
     $sum = report_summary($ym);
     $app = (string)setting('site_name', 'TopTen Form');
     $font = 'font-family:Inter,Arial,Helvetica,sans-serif';
-    $period = date('F j', strtotime($ym . '-01')) . ' &ndash; ' . date('F j, Y', strtotime('last day of ' . $ym . '-01'));
+    $period = fmt_date($ym . '-01') . ' &ndash; ' . fmt_date('last day of ' . $ym . '-01');
     $cards = '';
     foreach ($sum['sites'] as $s) {
         $rows = '';

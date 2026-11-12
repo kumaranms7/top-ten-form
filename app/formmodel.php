@@ -100,7 +100,8 @@ function sanitize_fields(array $in): array {
         $type = $f['type'];
         $name = preg_replace('/[^a-z0-9_]/', '', strtolower(str_replace([' ', '-'], '_', (string)($f['name'] ?? ''))));
         if ($name === '' || strpos($name, 'tf_') === 0 || $name === 'id') $name = $type . '_' . (count($clean) + 1);
-        if (in_array($type, ['heading', 'paragraph', 'pagebreak'], true)) {
+        if ($type === 'captcha') { if (!empty($seenCaptcha)) continue; $seenCaptcha = true; }   // one captcha per form
+        if (in_array($type, ['heading', 'paragraph', 'pagebreak', 'captcha'], true)) {
             $name = $type . '_' . (count($clean) + 1);   // layout items never claim a data field name (a heading called "Email" must not rename the real Email field)
         } else {
             $base = $name; $i = 2; while (isset($used[$name])) $name = $base . '_' . $i++;
@@ -112,7 +113,7 @@ function sanitize_fields(array $in): array {
             'id' => preg_replace('/[^a-z0-9_]/i', '', (string)($f['id'] ?? 'f' . count($clean))) ?: 'f' . count($clean), 'type' => $type, 'name' => $name,
             'label' => mb_substr(trim((string)($f['label'] ?? '')), 0, $type === 'consent' ? 3000 : 500), 'placeholder' => mb_substr((string)($f['placeholder'] ?? ''), 0, 255),
             'default' => mb_substr((string)($f['default'] ?? ''), 0, 255), 'help' => mb_substr((string)($f['help'] ?? ''), 0, 500),
-            'required' => !empty($f['required']) && !in_array($type, ['heading', 'paragraph', 'pagebreak', 'hidden', 'calculated'], true),
+            'required' => !empty($f['required']) && !in_array($type, ['heading', 'paragraph', 'pagebreak', 'captcha', 'hidden', 'calculated'], true),
             'width' => in_array($f['width'] ?? '', ['full', 'half', 'third'], true) ? $f['width'] : 'full',
             'css_class' => preg_replace('/[^A-Za-z0-9_\- ]/', '', (string)($f['css_class'] ?? '')),
             'options' => in_array($type, ['select', 'radio', 'checkbox'], true) ? $opts : [],
@@ -124,7 +125,8 @@ function sanitize_fields(array $in): array {
             'name_format' => $type === 'name' ? (in_array($f['name_format'] ?? '', ['first_last', 'first_middle_last', 'full'], true) ? $f['name_format'] : 'first_last') : '',
             'address_format' => $type === 'address' ? (in_array($f['address_format'] ?? '', ['street_city_state_zip', 'detailed', 'full'], true) ? $f['address_format'] : 'detailed') : '',
             'phone_format' => $type === 'tel' ? (in_array($f['phone_format'] ?? '', ['us', 'international', 'any'], true) ? $f['phone_format'] : 'any') : '',
-            'logic' => $type === 'pagebreak' ? null : sanitize_logic($f['logic'] ?? null, true),
+            'captcha_type' => $type === 'captcha' ? (in_array($f['captcha_type'] ?? '', ['math', 'text', 'question'], true) ? $f['captcha_type'] : 'math') : '',
+            'logic' => in_array($type, ['pagebreak', 'captcha'], true) ? null : sanitize_logic($f['logic'] ?? null, true),
         ];
     }
     return $clean;

@@ -88,6 +88,18 @@ function migration_list(): array {
                 if ($first) q('UPDATE users SET is_super=1 WHERE id=?', [$first]);
             }
         },
+        8 => function () {   // captcha is now a form field: forms that had the (mandatory) captcha get an explicit Captcha field at the end, keeping their chosen type
+            if (setting('captcha_required', '1') !== '1') return;
+            foreach (q('SELECT id, fields_json, settings_json FROM forms')->fetchAll() as $f) {
+                $fields = json_decode($f['fields_json'] ?? '[]', true) ?: [];
+                foreach ($fields as $x) if (($x['type'] ?? '') === 'captcha') continue 2;
+                $st = json_decode($f['settings_json'] ?? '[]', true) ?: [];
+                $t = in_array($st['captcha_type'] ?? '', ['math', 'text', 'question'], true) ? $st['captcha_type'] : 'math';
+                $fields[] = ['id' => 'fcap' . $f['id'], 'type' => 'captcha', 'name' => 'captcha_' . (count($fields) + 1), 'label' => 'Security check', 'placeholder' => '', 'default' => '', 'help' => '', 'required' => false,
+                    'width' => 'full', 'css_class' => '', 'options' => [], 'formula' => '', 'currency' => '', 'max' => 0, 'placeholders' => [], 'name_format' => '', 'address_format' => '', 'phone_format' => '', 'captcha_type' => $t, 'logic' => null];
+                q('UPDATE forms SET fields_json=? WHERE id=?', [json_encode($fields, JSON_UNESCAPED_UNICODE), $f['id']]);
+            }
+        },
     ];
 }
 
@@ -97,7 +109,8 @@ function run_migrations(): void {
     if (!q("SELECT GET_LOCK('tf_migrate', 15)")->fetchColumn()) return;
     try {
         $cur = (int)q("SELECT v FROM settings WHERE k='db_version'")->fetchColumn();
-        foreach (migration_list() as $v => $fn) {
+        $list = migration_list(); ksort($list);   // always in version order
+        foreach ($list as $v => $fn) {
             if ($v <= $cur) continue;
             $fn();
             set_setting('db_version', (string)$v);

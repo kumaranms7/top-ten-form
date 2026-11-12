@@ -23,6 +23,29 @@ function logic_attr(array $f): string {
     return ' data-logic="' . e(json_encode(['a' => $l['action'] ?? 'show', 'm' => $l['match'] ?? 'all', 'r' => $r], JSON_UNESCAPED_UNICODE)) . '"';
 }
 
+/** Will this conditional field be hidden before any visitor input? (a "show when ..." rule that needs a value to match) */
+function logic_starts_hidden(array $f): bool {
+    $l = $f['logic'] ?? null;
+    if (!$l || empty($l['rules']) || ($l['action'] ?? 'show') !== 'show') return false;
+    $needsValue = fn($r) => in_array($r['op'] ?? '', ['is', 'contains', 'not_empty', 'gt', 'lt'], true) && (($r['value'] ?? '') !== '' || ($r['op'] ?? '') === 'not_empty');
+    $hits = array_map($needsValue, $l['rules']);
+    return ($l['match'] ?? 'all') === 'any' ? !in_array(false, $hits, true) : in_array(true, $hits, true);
+}
+
+/** Captcha markup. Built-in: question/image box + answer. Google/Cloudflare: an empty placeholder that form.js fills in only when the visitor starts the form (keeps the third-party script out of page load). */
+function captcha_block_html(string $type, string $label): string {
+    $lab = '<span class="tf-label">' . e($label) . ' <span class="tf-req">*</span></span>';
+    if (($prov = captcha_provider()) !== 'none') {
+        return '<div class="tf-field tf-full tf-captcha tf-ext-cap" data-name="tf_captcha" data-type="captcha" data-provider="' . e($prov) . '" data-sitekey="' . e(captcha_cfg()[1]) . '">' . $lab
+            . '<div class="tf-ext-slot"></div><span class="tf-error" aria-live="polite"></span></div>';
+    }
+    return '<div class="tf-field tf-full tf-captcha" data-name="tf_captcha" data-type="captcha" data-ctype="' . e($type) . '">' . $lab
+        . '<div class="tf-cap-box"><div class="tf-cap-q" aria-live="polite">Loading...</div><button type="button" class="tf-cap-refresh" aria-label="Show a new security check" title="New one">&#8635;</button></div>'
+        . '<input type="text" name="tf_captcha_answer" class="tf-cap-ans" autocomplete="off" autocapitalize="off" spellcheck="false" required aria-label="Your answer to the security check" placeholder="Your answer"><input type="hidden" name="tf_captcha_id" value="">'
+        . ($type !== 'question' ? '<button type="button" class="tf-cap-alt">Can&rsquo;t see it? Use a text question instead</button>' : '')
+        . '<span class="tf-error" aria-live="polite"></span></div>';
+}
+
 function render_field_html(array $f, int $fid): string {
     $id = "tf{$fid}-" . $f['id'];
     $name = e($f['name']);
@@ -30,6 +53,7 @@ function render_field_html(array $f, int $fid): string {
     $req = !empty($f['required']) ? ' required' : '';
     $star = !empty($f['required']) ? ' <span class="tf-req">*</span>' : '';
     $cls = 'tf-field tf-' . e($f['width'] ?? 'full') . (($f['css_class'] ?? '') !== '' ? ' ' . e($f['css_class']) : '');
+    if (logic_starts_hidden($f)) $cls .= ' tf-hidden';   // fields that only appear on a condition start hidden (no layout jump when the script runs)
     $attr = ' data-name="' . $name . '" data-type="' . e($type) . '"' . logic_attr($f);
     $help = ($f['help'] ?? '') !== '' ? '<small class="tf-help">' . e($f['help']) . '</small>' : '';
     $ph = ($f['placeholder'] ?? '') !== '' ? ' placeholder="' . e($f['placeholder']) . '"' : '';
@@ -42,6 +66,8 @@ function render_field_html(array $f, int $fid): string {
     $curSpan = $cur !== '' ? '<span class="tf-cur">' . $cur . '</span>' : '';
 
     switch ($type) {
+        case 'captcha':
+            return captcha_block_html((string)($f['captcha_type'] ?: 'math'), trim((string)$f['label']) ?: 'Security check');
         case 'heading':
             return "<div class=\"tf-field tf-full\"$attr><h3 class=\"tf-heading\">" . e($f['label']) . '</h3></div>';
         case 'paragraph':
@@ -119,12 +145,6 @@ function asset_url(string $baseUrl, string $file): string {
     return $baseUrl . '/public/assets/' . $file . '?v=' . (@filemtime(TF_ROOT . '/public/assets/' . $file) ?: 1);
 }
 
-/** Captcha script URL for a form, or '' when captcha is off. */
-function captcha_script_url(array $form): string {
-    if (!captcha_external_active()) return '';   // external captcha (if configured in Settings) is used on every form
-    return captcha_provider() === 'turnstile' ? 'https://challenges.cloudflare.com/turnstile/v0/api.js' : 'https://www.google.com/recaptcha/api.js';
-}
-
 /** Split the field list into steps at each "page break" field. Returns [['title'=>..., 'fields'=>[...]], ...]. */
 function form_steps(array $fields): array {
     $steps = [['title' => '', 'fields' => []]];
@@ -138,8 +158,8 @@ function form_steps(array $fields): array {
     return array_values(array_filter($steps, fn($s, $i) => $s['fields'] || $i === 0, ARRAY_FILTER_USE_BOTH));
 }
 
-/** Just the <form>...</form> markup. $captchaScript=false omits the captcha <script> (the JS embed loads it itself, since innerHTML never runs scripts). */
-function render_form_markup(array $form, string $baseUrl, bool $captchaScript = true): string {
+/** Just the <form>...</form> markup. */
+function render_form_markup(array $form, string $baseUrl): string {
     $fid = (int)$form['id'];
     $s = form_settings($form);
     $fields = form_fields($form);
@@ -159,18 +179,9 @@ function render_form_markup(array $form, string $baseUrl, bool $captchaScript = 
         $body .= "    <div class=\"tf-fields\">\n$inner    </div>\n";
     }
 
-    $cap = '';
-    if ($capUrl = captcha_script_url($form)) {
-        $div = captcha_provider() === 'turnstile' ? 'cf-turnstile' : 'g-recaptcha';
-        $cap = "    <div class=\"$div\" data-sitekey=\"" . e(captcha_cfg()[1]) . "\"></div>\n" . ($captchaScript ? "    <script src=\"$capUrl\" async defer></script>\n" : '');
-    }
-    if (captcha_builtin_active()) { // built-in security check: lives on the last step of multi-step forms
-        $capHtml = "    <div class=\"tf-field tf-full tf-captcha\" data-name=\"tf_captcha\" data-type=\"captcha\" data-ctype=\"" . e($s['captcha_type']) . "\">"
-            . "<span class=\"tf-label\">Security check <span class=\"tf-req\">*</span></span>"
-            . "<div class=\"tf-cap-box\"><div class=\"tf-cap-q\" aria-live=\"polite\">Loading...</div><button type=\"button\" class=\"tf-cap-refresh\" aria-label=\"Show a new security check\" title=\"New one\">&#8635;</button></div>"
-            . "<input type=\"text\" name=\"tf_captcha_answer\" class=\"tf-cap-ans\" autocomplete=\"off\" autocapitalize=\"off\" spellcheck=\"false\" required aria-label=\"Your answer to the security check\" placeholder=\"Your answer\"><input type=\"hidden\" name=\"tf_captcha_id\" value=\"\">"
-            . ($s['captcha_type'] !== 'question' ? "<button type=\"button\" class=\"tf-cap-alt\">Can't see it? Use a text question instead</button>" : '')
-            . "<span class=\"tf-error\" aria-live=\"polite\"></span></div>\n";
+    if (($fc = form_captcha($form)) && !$fc['field']) { // captcha is mandatory for every form (Settings) and the form has no Captcha field: add one at the end (last step)
+        $capHtml = '    ' . captcha_block_html($fc['type'], $fc['label']) . "
+";
         if ($multi) { $pos = strrpos($body, '</div></fieldset>'); if ($pos !== false) $body = substr($body, 0, $pos) . '</div>' . $capHtml . '</fieldset>' . substr($body, $pos + strlen('</div></fieldset>')); }
         else $body .= $capHtml;
     }
@@ -183,7 +194,6 @@ function render_form_markup(array $form, string $baseUrl, bool $captchaScript = 
     $out .= "    <input type=\"hidden\" name=\"tf_form_id\" value=\"{$fid}\">\n";
     $out .= $body;
     $out .= "    <div class=\"tf-hp\" aria-hidden=\"true\"><label>Leave this empty<input type=\"text\" name=\"tf_website\" tabindex=\"-1\" autocomplete=\"off\"></label></div>\n";
-    $out .= $cap;
     $out .= "    <div class=\"tf-actions\">\n";
     if ($multi) $out .= "        <button type=\"button\" class=\"tf-prev\">Previous</button><button type=\"button\" class=\"tf-next\">Next</button>\n";
     $out .= "        <button type=\"submit\" class=\"tf-submit\">" . e($s['submit_text']) . "</button>\n";
@@ -199,4 +209,32 @@ function render_form_html(array $form, string $baseUrl): string {
         . "<link rel=\"stylesheet\" href=\"" . asset_url($baseUrl, 'form.min.css') . "\">\n\n"
         . render_form_markup($form, $baseUrl) . "\n"
         . "<script src=\"" . asset_url($baseUrl, 'form.min.js') . "\" defer></script>\n";
+}
+
+/** Rough rendered height (px) of a form, used to reserve its space before the JavaScript embed injects it (prevents layout shift). Deliberately a little low. */
+function form_est_height(array $form): int {
+    $fc = form_captcha($form); $steps = form_steps(form_fields($form)); $best = 0;
+    foreach ($steps as $i => $st) {
+        $h = 0; $row = 0.0;
+        $list = $st['fields'];
+        if ($fc && !$fc['field'] && $i === count($steps) - 1) $list[] = ['type' => 'captcha', 'width' => 'full', 'captcha_type' => $fc['type']];
+        foreach ($list as $f) {
+            $t = $f['type'];
+            if ($t === 'hidden' || logic_starts_hidden($f)) continue;
+            $fh = match (true) {
+                $t === 'textarea' => 140, $t === 'signature' => 230, $t === 'rating' => 70, $t === 'heading' => 36, $t === 'paragraph' => 48, $t === 'consent' => 44,
+                $t === 'name' => ($f['name_format'] ?? '') === 'full' ? 80 : 90, $t === 'address' => ($f['address_format'] ?? '') === 'full' ? 80 : (($f['address_format'] ?? '') === 'street_city_state_zip' ? 150 : 230),
+                in_array($t, ['radio', 'checkbox'], true) => 30 + 28 * max(1, count($f['options'] ?? [])),
+                $t === 'captcha' => captcha_provider() !== 'none' ? 105 : (($f['captcha_type'] ?? '') === 'question' ? 170 : 215),
+                default => 96,
+            };
+            $w = ['full' => 1.0, 'half' => 0.5, 'third' => 0.34][$f['width'] ?? 'full'] ?? 1.0;
+            if ($row + $w > 1.01) { $row = 0.0; }
+            if ($row == 0.0) $h += $fh;   // a new row starts: it is as tall as its first field
+            $row += $w;
+            if ($row >= 0.99) $row = 0.0;
+        }
+        $best = max($best, $h);
+    }
+    return (int)round(($best + 90 + (count($steps) > 1 ? 50 : 0)) * 0.97);   // + button row
 }

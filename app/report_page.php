@@ -67,7 +67,7 @@ function render_report_page(array $d): string {
     $logo = report_platform_logo();
     $domains = site_domains($site);
     $pct = fn($n) => $total ? round(100 * $n / $total, 1) : 0;
-    $period = date('F j', strtotime($d['from'])) . ' – ' . date('j, Y', strtotime($d['to']) - 86400);
+    $period = fmt_date($d['from']) . ' – ' . fmt_date(strtotime($d['to']) - 86400);
     $reportId = 'RPT-' . str_replace('-', '', $d['ym']) . '-' . str_pad((string)$site['id'], 3, '0', STR_PAD_LEFT);
     $months = [];   // month picker: last 12 months, newest first (the shown month is always included)
     for ($i = 1; $i <= 12; $i++) { $t = strtotime("first day of -$i month"); $months[date('Y-m', $t)] = date('F Y', $t); }
@@ -104,7 +104,7 @@ function render_report_page(array $d): string {
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-4">
       <div class="flex items-center space-x-3">
         <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-emerald-500 to-teal-500 text-white"><span class="w-1.5 h-1.5 rounded-full bg-white mr-2"></span>Automated Report</span>
-        <span class="text-xs text-slate-500 hidden sm:inline font-medium">Generated: <?= $h(date('M j, Y, g:i a T')) ?></span>
+        <span class="text-xs text-slate-500 hidden sm:inline font-medium">Generated: <?= $h(fmt_datetime(time()) . ' ' . date('T')) ?></span>
       </div>
       <div class="flex items-center gap-2.5">
         <select onchange="location.href=<?= $h(json_encode(report_share_url((int)$site['id']))) ?>.replace(/&amp;/g,'&')+'&m='+this.value" class="py-2 px-3 text-xs font-semibold rounded-xl text-slate-700 bg-white border border-slate-200 shadow-sm" aria-label="Month"><?php foreach ($months as $mv => $ml): ?><option value="<?= $h($mv) ?>"<?= $mv === $d['ym'] ? ' selected' : '' ?>><?= $h($ml) ?></option><?php endforeach; ?></select>
@@ -252,7 +252,7 @@ function render_report_page(array $d): string {
           <tbody class="divide-y divide-indigo-50/70 text-slate-700">
             <?php foreach ($F['rows'] as $r): $t = strtotime($r['at']); ?>
             <tr class="lead-row hover:bg-indigo-50/40">
-              <td class="py-4 px-4 whitespace-nowrap font-semibold text-slate-900"><span class="inline-block w-2 h-2 rounded-full mr-1.5" style="background:<?= $h($F['color']) ?>"></span><?= $h(date('M j, Y', $t)) ?><span class="block text-[10px] text-slate-400 font-normal ml-3.5"><?= $h(date('g:i a', $t)) ?> &middot; #<?= (int)$r['id'] ?></span></td>
+              <td class="py-4 px-4 whitespace-nowrap font-semibold text-slate-900"><span class="inline-block w-2 h-2 rounded-full mr-1.5" style="background:<?= $h($F['color']) ?>"></span><?= $h(fmt_date($t)) ?><span class="block text-[10px] text-slate-400 font-normal ml-3.5"><?= $h(fmt_time($t)) ?> &middot; #<?= (int)$r['id'] ?></span></td>
               <?php foreach ($F['fields'] as $f): $v = trim(flat_value($r['vals'][$f['name']] ?? '')); ?>
               <td class="py-4 px-4 cell-text"><?php if ($v === ''): ?><span class="text-slate-300">—</span><?php elseif ($f['type'] === 'email'): ?><a href="mailto:<?= $h($v) ?>" class="text-indigo-600 font-medium"><?= $h($v) ?></a><?php else: ?><?= $h($v) ?><?php endif; ?></td>
               <?php endforeach; ?>

@@ -114,7 +114,7 @@ admin_header('Forms', 'forms', '', 'Create, edit and manage your forms'); ?>
   <?php if (can('editor')): ?><button type="button" class="rename" title="Rename" data-id="<?= $f['id'] ?>"><?= icon('edit') ?></button><?php endif; ?>
   <span class="tag <?= $f['status'] === 'active' ? 'green' : 'red' ?>"><?= $f['status'] ?></span>
   <?php foreach (form_tags($f) as $t): ?><span class="ftag"><?= e($t) ?><?php if (can('editor')): ?><form method="post" class="ftag-x"><?= csrf_field() ?><input type="hidden" name="action" value="tag_remove"><input type="hidden" name="id" value="<?= $f['id'] ?>"><input type="hidden" name="tag" value="<?= e($t) ?>"><input type="hidden" name="ftag" value="<?= e($ftag) ?>"><button title="Remove tag" aria-label="Remove tag <?= e($t) ?>">&times;</button></form><?php endif; ?></span><?php endforeach; ?></div>
-  <div class="fc-meta">ID <?= $f['id'] ?> &middot; <?= $f['cnt'] ?> entr<?= $f['cnt'] == 1 ? 'y' : 'ies' ?> &middot; Updated <?= e(date('M j, Y', strtotime($f['updated_at']))) ?></div></div>
+  <div class="fc-meta">ID <?= $f['id'] ?> &middot; <?= $f['cnt'] ?> entr<?= $f['cnt'] == 1 ? 'y' : 'ies' ?> &middot; Updated <?= e(fmt_date(strtotime($f['updated_at']))) ?></div></div>
   <div class="fc-actions">
     <a class="chip ic-only c-sky" data-tip="Entries" aria-label="Entries" href="entries.php?form=<?= $f['id'] ?>"><?= icon('entries') ?></a>
     <a class="chip ic-only c-pink" data-tip="Preview" aria-label="Preview" href="preview.php?id=<?= $f['id'] ?>" target="_blank" rel="noopener"><?= icon('eye') ?></a>

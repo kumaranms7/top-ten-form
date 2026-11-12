@@ -4,7 +4,7 @@
   var fields = (TF.fields || []).slice();
   var sel = null, dragIdx = null, uid = Date.now();
   var canvas = document.getElementById('canvas'), props = document.getElementById('props');
-  var NOINPUT = ['heading', 'paragraph', 'pagebreak'], NOREQ = ['heading', 'paragraph', 'pagebreak', 'hidden', 'calculated'];
+  var NOINPUT = ['heading', 'paragraph', 'pagebreak', 'captcha'], NOREQ = ['heading', 'paragraph', 'pagebreak', 'captcha', 'hidden', 'calculated'];
 
   /* ---------- icons + colours per field type ---------- */
   var ICONS = {
@@ -21,11 +21,11 @@
     rating: '<path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/>', time: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
     price: '<path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>',
     calculated: '<rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 6h8M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01"/>',
-    signature: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>', pagebreak: '<path d="M3 12h18M7 8l-4 4 4 4M17 8l4 4-4 4"/>',
+    captcha: '<path d="M12 2 4 5v6c0 5 3.4 8.7 8 11 4.6-2.3 8-6 8-11V5z"/><path d="m9 12 2 2 4-4"/>', signature: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>', pagebreak: '<path d="M3 12h18M7 8l-4 4 4 4M17 8l4 4-4 4"/>',
     copy: '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>', trash: '<path d="M3 6h18M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>'
   };
   var COLORS = { text: 'indigo', email: 'pink', tel: 'green', number: 'orange', textarea: 'violet', select: 'sky', radio: 'rose', checkbox: 'teal', date: 'amber', file: 'blue', hidden: 'slate', consent: 'green',
-    heading: 'indigo', paragraph: 'sky', name: 'indigo', address: 'teal', rating: 'amber', time: 'orange', price: 'green', calculated: 'violet', signature: 'pink', pagebreak: 'slate' };
+    heading: 'indigo', paragraph: 'sky', name: 'indigo', address: 'teal', rating: 'amber', time: 'orange', price: 'green', calculated: 'violet', signature: 'pink', pagebreak: 'slate', captcha: 'green' };
   function col(t) { return 'c-' + (COLORS[t] || 'indigo'); }
   function svg(n) { return '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + (ICONS[n] || '') + '</svg>'; }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
@@ -77,6 +77,7 @@
     if (type === 'paragraph') f.label = 'Descriptive text goes here.';
     if (type === 'consent') f.label = 'I agree to the terms and privacy policy';
     if (type === 'pagebreak') f.label = 'Next step';
+    if (type === 'captcha') { f.label = 'Security check'; f.captcha_type = 'math'; }
     if (type === 'price' || type === 'calculated') f.currency = '$';
     if (type === 'rating') f.max = 5;
     if (type === 'name') f.name_format = 'first_last';
@@ -86,6 +87,7 @@
     return f;
   }
   function addField(type, at) {
+    if (type === 'captcha' && fields.some(function (x) { return x.type === 'captcha'; })) { alert('This form already has a Captcha field.'); return; }
     var f = newField(type);
     if (at == null || at > fields.length) fields.push(f); else fields.splice(at, 0, f);
     sel = f.id; setDirty(true); render(); showTab('field'); commit();
@@ -131,6 +133,8 @@
     var opt = function (cur, list) { return list.map(function (o) { return '<option value="' + o[0] + '"' + (cur === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join(''); };
     if (f.type === 'name') h += '<label>Name format<select data-k="name_format">' + opt(f.name_format || 'first_last', [['first_last', 'First name + Last name'], ['first_middle_last', 'First + Middle + Last name'], ['full', 'Full name (one box)']]) + '</select></label>';
     if (f.type === 'address') h += '<label>Address format<select data-k="address_format">' + opt(f.address_format || 'detailed', [['street_city_state_zip', 'Street + City + State + ZIP'], ['detailed', 'Detailed (adds apartment line + country)'], ['full', 'Full address (one box)']]) + '</select></label>';
+    if (f.type === 'captcha') h += '<label>Captcha type<select data-k="captcha_type">' + opt(f.captcha_type || 'math', [['math', 'Math problem (recommended)'], ['text', 'Text image (type the characters)'], ['question', 'Question and answer (random easy question: weekdays, months, sums, colours)']]) + '</select></label>' +
+      '<p class="muted" style="margin-top:-6px">Always required. If Google reCAPTCHA or Cloudflare Turnstile is set in Settings, that is shown instead of this type. Only one captcha per form.</p>';
     if (f.type === 'tel') h += '<label>Phone format<select data-k="phone_format">' + opt(f.phone_format || 'any', [['us', 'US: (XXX) XXX-XXXX'], ['international', 'International: +country code + full number'], ['any', 'Any format (not checked)']]) + '</select></label>';
     if (hasOpts) h += '<label>Options <small>(one per line)</small><textarea data-k="options" rows="5">' + esc(f.options.join('\n')) + '</textarea></label>';
     if (f.type === 'price' || f.type === 'calculated') h += '<label>Currency symbol<input data-k="currency" maxlength="3" value="' + esc(f.currency) + '"></label>';
@@ -140,11 +144,11 @@
         '<p class="muted" style="margin-top:-8px">Number fields you can use: ' + (refs || 'none yet (add Number or Price fields)') + '</p>';
     }
     if (f.type === 'rating') h += '<label>Number of stars<select data-k="max">' + [3, 4, 5, 6, 7, 8, 9, 10].map(function (n) { return '<option' + ((+f.max || 5) === n ? ' selected' : '') + '>' + n + '</option>'; }).join('') + '</select></label>';
-    if (f.type !== 'hidden' && f.type !== 'pagebreak') {
+    if (f.type !== 'hidden' && f.type !== 'pagebreak' && f.type !== 'captcha') {
       h += '<label>Width<select data-k="width">' + ['full', 'half', 'third'].map(function (w) { return '<option value="' + w + '"' + (f.width === w ? ' selected' : '') + '>' + w + '</option>'; }).join('') + '</select></label>';
       h += '<label>CSS class<input data-k="css_class" value="' + esc(f.css_class) + '"></label>';
     }
-    if (f.type !== 'pagebreak') h += '<details' + (f.logic ? ' open' : '') + ' class="lgwrap"><summary>Conditional logic</summary><div id="lgBox"></div></details>';
+    if (f.type !== 'pagebreak' && f.type !== 'captcha') h += '<details' + (f.logic ? ' open' : '') + ' class="lgwrap"><summary>Conditional logic</summary><div id="lgBox"></div></details>';
     props.innerHTML = h;
     var box = document.getElementById('lgBox');
     if (box) {
@@ -233,7 +237,6 @@
     });
   });
 
-  if (el('s_captcha_type')) el('s_captcha_type').addEventListener('change', function () { el('capQWrap').hidden = this.value !== 'question'; });
 
   /* ---------- save ---------- */
   el('saveBtn').addEventListener('click', function () {
@@ -244,7 +247,7 @@
       settings: {
         submit_text: val('s_submit_text'), css_class: val('s_css_class'), success_message: val('s_success_message'), redirect_url: val('s_redirect_url'),
         success_mode: document.querySelector('input[name=s_mode]:checked').value, pass_values: val('s_pass_values'),
-        allowed_origins: val('s_allowed_origins'), spam_protection: val('s_spam'), captcha_type: val('s_captcha_type') || 'math', captcha_questions: val('s_captcha_q'), save_entries: val('s_save_entries'), save_resume: val('s_save_resume'),
+        allowed_origins: val('s_allowed_origins'), spam_protection: val('s_spam'), save_entries: val('s_save_entries'), save_resume: val('s_save_resume'),
         custom_css: val('s_custom_css'),
         theme: { preset: val('th_preset'), accent: val('th_accent'), text: val('th_text'), border: val('th_border'), bg: val('th_bg_on') ? val('th_bg') : '', radius: +val('th_radius'), font_size: +val('th_fs'), input_style: val('th_input'), button_style: val('th_button') }
       }
