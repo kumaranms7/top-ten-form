@@ -73,7 +73,7 @@ function build_combined_report_email(string $ym): array {
 function queue_monthly_report(string $ym, array $to): int {
     [$html, $total, $label] = build_combined_report_email($ym);
     queue_job('mail', ['to' => implode(', ', $to), 'cc' => '', 'bcc' => '', 'from_name' => '', 'from_email' => '', 'reply_to' => '',
-        'subject' => 'Monthly lead report - ' . $label . ' - all websites', 'body' => $html]);
+        'subject' => 'Top Ten Form Monthly Lead Report - ' . $label, 'body' => $html]);
     return $total;
 }
 
