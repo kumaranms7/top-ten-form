@@ -195,7 +195,10 @@
     if (c.img) { var im = new Image(); im.alt = c.label; im.src = c.img; im.className = 'tf-cap-img'; im.draggable = false; box.appendChild(im); }
     else box.textContent = c.question || '';
     ans.setAttribute('inputmode', c.type === 'math' ? 'numeric' : 'text');
-    w.setAttribute('data-ctype', c.type); if (alt) alt.style.display = c.type === 'question' ? 'none' : '';
+    w.setAttribute('data-ctype', c.type);
+    var lt = w.querySelector('.tf-cap-lt'); if (lt) lt.textContent = c.type === 'question' && c.question ? c.question : lt.getAttribute('data-def');
+    ans.setAttribute('aria-label', c.type === 'question' && c.question ? c.question : 'Your answer to the security check');
+    if (alt) alt.style.display = c.type === 'question' ? 'none' : '';
   }
   function capLoad(form, alt) {
     var w = form.querySelector('.tf-captcha:not(.tf-ext-cap)'); if (!w) return;

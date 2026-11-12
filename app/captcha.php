@@ -26,10 +26,10 @@ function captcha_provider(): string {
 function captcha_required(): bool { return setting('captcha_required', '1') === '1'; }
 /** Does this form have a captcha, and which one? ['type' => math|text|question, 'label' => text, 'field' => the Captcha field or null (= added automatically)]. Null = no captcha. */
 function form_captcha(array $form): ?array {
-    foreach (form_fields($form) as $f) if (($f['type'] ?? '') === 'captcha') return ['type' => in_array($f['captcha_type'] ?? '', ['math', 'text', 'question'], true) ? $f['captcha_type'] : 'math', 'label' => trim((string)$f['label']) ?: 'Security check', 'field' => $f];
+    foreach (form_fields($form) as $f) if (($f['type'] ?? '') === 'captcha') return ['type' => in_array($f['captcha_type'] ?? '', ['math', 'text', 'question'], true) ? $f['captcha_type'] : 'question', 'label' => trim((string)$f['label']) ?: 'Security check', 'field' => $f];
     if (!captcha_required()) return null;
-    $t = form_settings($form)['captcha_type'] ?? 'math';
-    return ['type' => in_array($t, ['math', 'text', 'question'], true) ? $t : 'math', 'label' => 'Security check', 'field' => null];
+    $t = form_settings($form)['captcha_type'] ?? 'question';
+    return ['type' => in_array($t, ['math', 'text', 'question'], true) ? $t : 'question', 'label' => 'Security check', 'field' => null];
 }
 function captcha_builtin_active(array $form): bool { return form_captcha($form) !== null && captcha_provider() === 'none'; }
 function captcha_external_active(array $form): bool { return form_captcha($form) !== null && captcha_provider() !== 'none'; }

@@ -4,7 +4,7 @@
 function form_defaults(): array {
     return [
         'submit_text' => 'Submit', 'success_mode' => 'message', 'success_message' => 'Thank you! Your message has been sent.',
-        'redirect_url' => '', 'allowed_origins' => '', 'captcha_type' => 'math', 'captcha_questions' => '', 'css_class' => '', 'save_entries' => 1, 'pass_values' => 0,
+        'redirect_url' => '', 'allowed_origins' => '', 'captcha_type' => 'question', 'captcha_questions' => '', 'css_class' => '', 'save_entries' => 1, 'pass_values' => 0,
         'save_resume' => 0, 'spam_protection' => 'standard', 'theme' => theme_default(), 'custom_css' => '',
     ];
 }
@@ -34,7 +34,7 @@ function logic_starts_hidden(array $f): bool {
 
 /** Captcha markup. Built-in: question/image box + answer. Google/Cloudflare: an empty placeholder that form.js fills in only when the visitor starts the form (keeps the third-party script out of page load). */
 function captcha_block_html(string $type, string $label): string {
-    $lab = '<span class="tf-label">' . e($label) . ' <span class="tf-req">*</span></span>';
+    $lab = '<span class="tf-label tf-cap-lab"><span class="tf-cap-lt" data-def="' . e($label) . '">' . e($label) . '</span> <span class="tf-req">*</span></span>';
     if (($prov = captcha_provider()) !== 'none') {
         return '<div class="tf-field tf-full tf-captcha tf-ext-cap" data-name="tf_captcha" data-type="captcha" data-provider="' . e($prov) . '" data-sitekey="' . e(captcha_cfg()[1]) . '">' . $lab
             . '<div class="tf-ext-slot"></div><span class="tf-error" aria-live="polite"></span></div>';
@@ -67,7 +67,7 @@ function render_field_html(array $f, int $fid): string {
 
     switch ($type) {
         case 'captcha':
-            return captcha_block_html((string)($f['captcha_type'] ?: 'math'), trim((string)$f['label']) ?: 'Security check');
+            return captcha_block_html((string)($f['captcha_type'] ?: 'question'), trim((string)$f['label']) ?: 'Security check');
         case 'heading':
             return "<div class=\"tf-field tf-full\"$attr><h3 class=\"tf-heading\">" . e($f['label']) . '</h3></div>';
         case 'paragraph':
@@ -225,7 +225,7 @@ function form_est_height(array $form): int {
                 $t === 'textarea' => 140, $t === 'signature' => 230, $t === 'rating' => 70, $t === 'heading' => 36, $t === 'paragraph' => 48, $t === 'consent' => 44,
                 $t === 'name' => ($f['name_format'] ?? '') === 'full' ? 80 : 90, $t === 'address' => ($f['address_format'] ?? '') === 'full' ? 80 : (($f['address_format'] ?? '') === 'street_city_state_zip' ? 150 : 230),
                 in_array($t, ['radio', 'checkbox'], true) => 30 + 28 * max(1, count($f['options'] ?? [])),
-                $t === 'captcha' => captcha_provider() !== 'none' ? 105 : (($f['captcha_type'] ?? '') === 'question' ? 170 : 215),
+                $t === 'captcha' => captcha_provider() !== 'none' ? 105 : (($f['captcha_type'] ?? '') === 'question' ? 100 : 190),
                 default => 96,
             };
             $w = ['full' => 1.0, 'half' => 0.5, 'third' => 0.34][$f['width'] ?? 'full'] ?? 1.0;

@@ -79,4 +79,4 @@ $presets = theme_presets();
   </aside>
 </div>
 <script>window.TF = {fields: <?= json_encode($fields) ?>, types: <?= json_encode(field_types()) ?>, presets: <?= json_encode($presets) ?>, saveUrl: 'builder.php?id=<?= $id ?>'};</script>
-<?php admin_footer('<script src="assets/logic-editor.js?v=1"></script><script src="assets/builder.js?v=10"></script>');
+<?php admin_footer('<script src="assets/logic-editor.js?v=1"></script><script src="assets/builder.js?v=12"></script>');

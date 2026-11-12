@@ -125,7 +125,7 @@ function sanitize_fields(array $in): array {
             'name_format' => $type === 'name' ? (in_array($f['name_format'] ?? '', ['first_last', 'first_middle_last', 'full'], true) ? $f['name_format'] : 'first_last') : '',
             'address_format' => $type === 'address' ? (in_array($f['address_format'] ?? '', ['street_city_state_zip', 'detailed', 'full'], true) ? $f['address_format'] : 'detailed') : '',
             'phone_format' => $type === 'tel' ? (in_array($f['phone_format'] ?? '', ['us', 'international', 'any'], true) ? $f['phone_format'] : 'any') : '',
-            'captcha_type' => $type === 'captcha' ? (in_array($f['captcha_type'] ?? '', ['math', 'text', 'question'], true) ? $f['captcha_type'] : 'math') : '',
+            'captcha_type' => $type === 'captcha' ? (in_array($f['captcha_type'] ?? '', ['math', 'text', 'question'], true) ? $f['captcha_type'] : 'question') : '',
             'logic' => in_array($type, ['pagebreak', 'captcha'], true) ? null : sanitize_logic($f['logic'] ?? null, true),
         ];
     }
@@ -141,7 +141,7 @@ function sanitize_settings(array $s): array {
         'submit_text' => mb_substr(trim((string)($s['submit_text'] ?? '')) ?: 'Submit', 0, 100), 'success_mode' => $mode,
         'success_message' => mb_substr(trim((string)($s['success_message'] ?? '')) ?: 'Thank you!', 0, 1000), 'redirect_url' => $ru,
         'pass_values' => !empty($s['pass_values']) ? 1 : 0, 'allowed_origins' => trim((string)($s['allowed_origins'] ?? '')),
-        'captcha_type' => in_array($s['captcha_type'] ?? '', ['math', 'text', 'question'], true) ? $s['captcha_type'] : 'math',
+        'captcha_type' => in_array($s['captcha_type'] ?? '', ['math', 'text', 'question'], true) ? $s['captcha_type'] : 'question',
         'captcha_questions' => mb_substr((string)($s['captcha_questions'] ?? ''), 0, 3000), 'css_class' => preg_replace('/[^A-Za-z0-9_\- ]/', '', (string)($s['css_class'] ?? '')),
         'save_entries' => !empty($s['save_entries']) ? 1 : 0, 'save_resume' => !empty($s['save_resume']) ? 1 : 0,
         'spam_protection' => in_array($s['spam_protection'] ?? '', ['standard', 'strict', 'basic'], true) ? $s['spam_protection'] : 'standard',

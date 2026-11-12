@@ -77,7 +77,7 @@
     if (type === 'paragraph') f.label = 'Descriptive text goes here.';
     if (type === 'consent') f.label = 'I agree to the terms and privacy policy';
     if (type === 'pagebreak') f.label = 'Next step';
-    if (type === 'captcha') { f.label = 'Security check'; f.captcha_type = 'math'; }
+    if (type === 'captcha') { f.label = 'Security check'; f.captcha_type = 'question'; }
     if (type === 'price' || type === 'calculated') f.currency = '$';
     if (type === 'rating') f.max = 5;
     if (type === 'name') f.name_format = 'first_last';
@@ -116,7 +116,7 @@
     var isInput = NOINPUT.indexOf(f.type) === -1, hasOpts = ['select', 'radio', 'checkbox'].indexOf(f.type) > -1;
     var h = '<h2>' + esc(types[f.type]) + '</h2>';
     var lblText = f.type === 'pagebreak' ? 'Title of the next step' : (isInput ? 'Label' : 'Text');
-    h += '<label>' + lblText + (f.type === 'paragraph' ? '<textarea data-k="label" rows="4">' + esc(f.label) + '</textarea>' : '<input data-k="label" value="' + esc(f.label) + '">') + '</label>';
+    if (f.type !== 'captcha') h += '<label>' + lblText + (f.type === 'paragraph' ? '<textarea data-k="label" rows="4">' + esc(f.label) + '</textarea>' : '<input data-k="label" value="' + esc(f.label) + '">') + '</label>';
     if (isInput) {
       h += '<label>Field name <small>(letters, numbers, _; used in logic and email tags)</small><input data-k="name" value="' + esc(f.name) + '"></label>';
       if (['text', 'email', 'tel', 'number', 'textarea', 'select', 'price'].indexOf(f.type) > -1) h += '<label>Placeholder<input data-k="placeholder" value="' + esc(f.placeholder) + '"></label>';
@@ -133,7 +133,7 @@
     var opt = function (cur, list) { return list.map(function (o) { return '<option value="' + o[0] + '"' + (cur === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join(''); };
     if (f.type === 'name') h += '<label>Name format<select data-k="name_format">' + opt(f.name_format || 'first_last', [['first_last', 'First name + Last name'], ['first_middle_last', 'First + Middle + Last name'], ['full', 'Full name (one box)']]) + '</select></label>';
     if (f.type === 'address') h += '<label>Address format<select data-k="address_format">' + opt(f.address_format || 'detailed', [['street_city_state_zip', 'Street + City + State + ZIP'], ['detailed', 'Detailed (adds apartment line + country)'], ['full', 'Full address (one box)']]) + '</select></label>';
-    if (f.type === 'captcha') h += '<label>Captcha type<select data-k="captcha_type">' + opt(f.captcha_type || 'math', [['math', 'Math problem (recommended)'], ['text', 'Text image (type the characters)'], ['question', 'Question and answer (random easy question: weekdays, months, sums, colours)']]) + '</select></label>' +
+    if (f.type === 'captcha') h += '<label>Captcha type<select data-k="captcha_type">' + opt(f.captcha_type || 'question', [['question', 'Question and answer (random easy question: weekdays, months, sums, colours)'], ['math', 'Math problem (image)'], ['text', 'Text image (type the characters)']]) + '</select></label>' +
       '<p class="muted" style="margin-top:-6px">Always required. If Google reCAPTCHA or Cloudflare Turnstile is set in Settings, that is shown instead of this type. Only one captcha per form.</p>';
     if (f.type === 'tel') h += '<label>Phone format<select data-k="phone_format">' + opt(f.phone_format || 'any', [['us', 'US: (XXX) XXX-XXXX'], ['international', 'International: +country code + full number'], ['any', 'Any format (not checked)']]) + '</select></label>';
     if (hasOpts) h += '<label>Options <small>(one per line)</small><textarea data-k="options" rows="5">' + esc(f.options.join('\n')) + '</textarea></label>';
