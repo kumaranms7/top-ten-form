@@ -1,0 +1,24 @@
+# TopTen Form - folder entry point
+#   * not installed yet (no config/config.php)  -> install.php
+#   * installed                                  -> admin/login.php (already-logged-in users go on to the dashboard)
+DirectoryIndex index.php
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  # Only when the bare folder URL is requested
+  RewriteCond %{REQUEST_FILENAME}/config/config.php !-f
+  RewriteRule ^$ %{REQUEST_URI}install.php [R=302,L]
+  RewriteRule ^$ %{REQUEST_URI}admin/login.php [R=302,L]
+</IfModule>
+
+# Never serve helper/source files directly
+<FilesMatch "\.(sql|bat|md|log|lock|json)$">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+  </IfModule>
+</FilesMatch>

@@ -1,0 +1,14 @@
+# secrets and per-install data
+/config/config.php
+/uploads/*
+!/uploads/.gitkeep
+/public/media/*
+!/public/media/.gitkeep
+# release archives and design reference
+*.zip
+/monthly_lead_performance_report_template.html
+# OS / editor
+Thumbs.db
+.DS_Store
+.vscode/
+.idea/
